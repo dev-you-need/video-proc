@@ -9,7 +9,7 @@ from deepface.extendedmodels import Age
 
 from tensorflow.keras.preprocessing import image
 
-import mtcnn
+import face_recognition
 
 input_video = 'video1.mp4'
 output_video = 'video1_out5.mp4'
@@ -33,7 +33,6 @@ face_min_height = int(frame_height // face_min_height_scale)
 fourcc = cv2.VideoWriter_fourcc(*'MP4V')
 out = cv2.VideoWriter(output_video, fourcc, fps, (frame_width, frame_height))
 
-face_detector = mtcnn.MTCNN()
 
 def show_faces(img, faces):
     for (x, y, w, h) in faces:
@@ -55,6 +54,7 @@ def show_faces(img, faces):
 
     return img
 
+
 def face_attrib_recognition(img, faces):
     faces_attr = []
 
@@ -66,6 +66,7 @@ def face_attrib_recognition(img, faces):
 
         img = cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
         face = img[y:y + h, x:x + w]
+        face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
 
         race_label = ethnicity_detect(face)
         d['race'] = race_label
@@ -78,6 +79,7 @@ def face_attrib_recognition(img, faces):
 
         faces_attr.append(d)
     return faces_attr
+
 
 def put_text(img, faces_attr):
     for d in faces_attr:
@@ -96,6 +98,7 @@ def put_text(img, faces_attr):
 
     return img
 
+
 def extend_bbox(bbox, padding=0.5):
     (x, y, w, h) = bbox
 
@@ -110,12 +113,6 @@ def extend_bbox(bbox, padding=0.5):
 
     return x, y, w, h
 
-def cut_faces(img, faces):
-    imgs = []
-    for (x, y, w, h) in faces:
-        x, y, w, h = extend_bbox((x, y, w, h))
-        imgs.append(img[y:y + h, x:x + w])
-    return imgs
 
 def img_preprocess(img, target_size=(224, 224)):
     img = cv2.resize(img, target_size)
@@ -123,6 +120,7 @@ def img_preprocess(img, target_size=(224, 224)):
     img_pixels = np.expand_dims(img_pixels, axis=0)
     img_pixels /= 255
     return img_pixels
+
 
 def ethnicity_detect(img):
     result = 'Unknown'
@@ -152,6 +150,7 @@ def age_detect(img):
 
     return apparent_age
 
+
 def gender_detect(img):
     gender = 'Unknown'
 
@@ -172,20 +171,22 @@ def gender_detect(img):
     return gender
 
 
-def face_detect_mtcnn(img):
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    detections = face_detector.detect_faces(img_rgb)
+def face_detect(img):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    face_locations = face_recognition.face_locations(img)
+    result = []
 
-    faces = []
-    if len(detections) > 0:
-        for d in detections:
-            x, y, w, h = d["box"]
+    for face in face_locations:
+        top, right, bottom, left = face
 
-            if (h > face_min_height) and d['confidence'] > 0.97:
-                x, y, w, h = extend_bbox((x, y, w, h))
-                faces.append((x, y, w, h))
+        x, y, w, h = (left, top, right - left, bottom - top)
 
-    return faces
+        if h > face_min_height:
+            x, y, w, h = extend_bbox(((x, y, w, h)))
+            result.append((x, y, w, h))
+
+    return result
+
 
 count = 0
 frame_face_count = 0
@@ -201,7 +202,7 @@ while (cap.isOpened()):
 
     if ret and (count < 20000):
         if count%(fps//2) == 0:
-            faces = face_detect_mtcnn(frame)
+            faces = face_detect(frame)
             faces_attr = face_attrib_recognition(frame, faces)
 
             #cv2.putText(frame, str(count), (40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
