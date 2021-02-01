@@ -10,14 +10,17 @@ from deepface.extendedmodels import Age
 from tensorflow.keras.preprocessing import image
 
 import face_recognition
+import mtcnn
 
-input_video = 'video1.mp4'
-output_video = 'video1_out5.mp4'
+input_video = 'video4.mp4'
+output_video = 'video4_out3.mp4'
 face_min_height_scale = 17
 
 race_model = Race.loadModel()
 gender_model = Gender.loadModel()
 age_model = Age.loadModel()
+
+face_detector = mtcnn.MTCNN()
 
 cap = cv2.VideoCapture(input_video)
 
@@ -99,7 +102,7 @@ def put_text(img, faces_attr):
     return img
 
 
-def extend_bbox(bbox, padding=0.5):
+def extend_bbox(bbox, padding=0.6):
     (x, y, w, h) = bbox
 
     w = max(w, h)
@@ -171,6 +174,22 @@ def gender_detect(img):
     return gender
 
 
+def face_detect_mtcnn(img):
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    detections = face_detector.detect_faces(img_rgb)
+
+    faces = []
+    if len(detections) > 0:
+        for d in detections:
+            x, y, w, h = d["box"]
+
+            if (h > face_min_height) and d['confidence'] > 0.98:
+                x, y, w, h = extend_bbox((x, y, w, h))
+                faces.append((x, y, w, h))
+
+    return faces
+
+
 def face_detect(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     face_locations = face_recognition.face_locations(img)
@@ -202,7 +221,7 @@ while (cap.isOpened()):
 
     if ret and (count < 20000):
         if count%(fps//2) == 0:
-            faces = face_detect(frame)
+            faces = face_detect_mtcnn(frame)
             faces_attr = face_attrib_recognition(frame, faces)
 
             #cv2.putText(frame, str(count), (40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
