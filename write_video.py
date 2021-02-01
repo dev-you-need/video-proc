@@ -14,9 +14,9 @@ import mtcnn
 
 from tools import *
 
-input_video = 'video4.mp4'
-output_video = 'video4_out2.mp4'
-face_min_height_scale = 20
+input_video = 'video1.mp4'
+output_video = 'video1_out5.mp4'
+face_min_height_scale = 17
 
 race_model = Race.loadModel()
 gender_model = Gender.loadModel()
@@ -58,6 +58,47 @@ def show_faces(img, faces):
 
     return img
 
+def face_attrib_recognition(img, faces):
+    faces_attr = []
+
+    for (x, y, w, h) in faces:
+        if min((x, y, w, h)) < 0:
+            continue
+
+        d = {'bbox': (x, y, w, h)}
+
+        img = cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        face = img[y:y + h, x:x + w]
+
+        race_label = ethnicity_detect(face)
+        d['race'] = race_label
+
+        gender_label = gender_detect(face)
+        d['gender'] = gender_label
+
+        age_label = age_detect(face)
+        d['age'] = age_label
+
+        faces_attr.append(d)
+    return faces_attr
+
+def put_text(img, faces_attr):
+    for d in faces_attr:
+        (x, y, w, h) = d.get('bbox')
+
+        img = cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+        race_label = d.get('race')
+        img = cv2.putText(img, race_label, (int(x), int(y + h)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+        gender_label = d.get('gender')
+        img = cv2.putText(img, gender_label, (int(x), int(y + h+22)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+        age_label = d.get('age')
+        img = cv2.putText(img, str(age_label), (int(x), int(y + h + 44)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+    return img
+
 def extend_bbox(bbox, padding=0.5):
     (x, y, w, h) = bbox
 
@@ -75,11 +116,7 @@ def extend_bbox(bbox, padding=0.5):
 def cut_faces(img, faces):
     imgs = []
     for (x, y, w, h) in faces:
-        print(x,y,w,h)
         x, y, w, h = extend_bbox((x, y, w, h))
-        print(x,y,w,h)
-        print("")
-
         imgs.append(img[y:y + h, x:x + w])
     return imgs
 
@@ -147,10 +184,9 @@ def face_detect_mtcnn(img):
         for d in detections:
             x, y, w, h = d["box"]
 
-            if (h > frame_height / face_min_height_scale) and d['confidence']>0.96:
+            if (h > face_min_height) and d['confidence'] > 0.97:
                 x, y, w, h = extend_bbox((x, y, w, h))
                 faces.append((x, y, w, h))
-
 
     return faces
 
@@ -159,16 +195,24 @@ frame_face_count = 0
 
 pbar = tqdm(total=length)
 
+faces = []
+faces_attr = []
+
 while (cap.isOpened()):
     cap.set(1, count)
     ret, frame = cap.read()
 
-    if ret and (count < 2000):
-        faces = face_detect_mtcnn(frame)
-        frame = show_faces(frame, faces)
+    if ret and (count < 20000):
+        if count%(fps//2) == 0:
+            faces = face_detect_mtcnn(frame)
+            faces_attr = face_attrib_recognition(frame, faces)
+
+            #cv2.putText(frame, str(count), (40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+        frame = put_text(frame, faces_attr)
         out.write(frame)
 
-        count += fps*2
+        count += 1
         pbar.update()
 
     else:
