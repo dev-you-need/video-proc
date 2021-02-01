@@ -1,5 +1,4 @@
 import cv2
-import deepface
 
 from tqdm import tqdm
 
@@ -11,8 +10,6 @@ from deepface.extendedmodels import Age
 from tensorflow.keras.preprocessing import image
 
 import mtcnn
-
-from tools import *
 
 input_video = 'video1.mp4'
 output_video = 'video1_out5.mp4'
