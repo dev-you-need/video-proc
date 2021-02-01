@@ -1,2 +1,3 @@
 deepface==0.0.49
 tqdm
+face_recognition
