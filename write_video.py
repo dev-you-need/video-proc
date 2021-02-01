@@ -14,9 +14,9 @@ import mtcnn
 
 from tools import *
 
-input_video = 'video1.mp4'
-output_video = 'video1_out3.mp4'
-face_min_height_scale = 8
+input_video = 'video4.mp4'
+output_video = 'video4_out2.mp4'
+face_min_height_scale = 20
 
 race_model = Race.loadModel()
 gender_model = Gender.loadModel()
@@ -28,20 +28,20 @@ fps = cap.get(cv2.CAP_PROP_FPS)
 fps = round(fps)
 length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-face_min_height = int(height//face_min_height_scale)
+face_min_height = int(frame_height // face_min_height_scale)
 
 fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
+out = cv2.VideoWriter(output_video, fourcc, fps, (frame_width, frame_height))
 
 face_detector = mtcnn.MTCNN()
 
 def show_faces(img, faces):
     for (x, y, w, h) in faces:
 
-        if min((x, y, w, h)) < 0:
+        if min((x, y, w, h)) <= 0:
             continue
 
         img = cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
@@ -58,29 +58,27 @@ def show_faces(img, faces):
 
     return img
 
-def extend_bbox(bbox, padding=10):
+def extend_bbox(bbox, padding=0.5):
     (x, y, w, h) = bbox
 
-    if x-padding>0:
-        x=x-padding
-    else:
-        x=0
+    w = max(w, h)
+    h = max(w, h)
 
-    if y-padding>0:
-        y=y-padding
-    else:
-        y=0
+    x = max(0, x - int(w * padding))
+    y = max(0, y - int(h * padding))
 
-    w = w + padding * 2
-
-    h = h + padding * 2
+    w = min(frame_width - x, w + int(w * padding * 2))
+    h = min(frame_height - y, h + int(h * padding * 2))
 
     return x, y, w, h
 
 def cut_faces(img, faces):
     imgs = []
     for (x, y, w, h) in faces:
+        print(x,y,w,h)
         x, y, w, h = extend_bbox((x, y, w, h))
+        print(x,y,w,h)
+        print("")
 
         imgs.append(img[y:y + h, x:x + w])
     return imgs
@@ -94,7 +92,7 @@ def img_preprocess(img, target_size=(224, 224)):
 
 def ethnicity_detect(img):
     result = 'Unknown'
-    race_labels = ['asian', 'indian', 'black', 'white', 'middle eastern', 'latino hispanic']
+    race_labels = ['asian', 'indian', 'black', 'white', 'middle eastern', 'latino']
 
     try:
         img_pixels = img_preprocess(img)
@@ -113,7 +111,7 @@ def age_detect(img):
     try:
         img_pixels = img_preprocess(img)
         preds = age_model.predict(img_pixels)[0,:]
-        apparent_age = int(Age.findApparentAge(preds))
+        apparent_age = "Age: {}".format(int(Age.findApparentAge(preds)))
 
     except Exception as e:
         print(e)
@@ -132,6 +130,8 @@ def gender_detect(img):
         elif np.argmax(gender_prediction) == 1:
             gender = "Man"
 
+        gender = '{}: {:02.0f}%'.format(gender, np.max(gender_prediction)*100)
+
     except Exception as e:
         print(e)
 
@@ -147,7 +147,8 @@ def face_detect_mtcnn(img):
         for d in detections:
             x, y, w, h = d["box"]
 
-            if (h > height / face_min_height_scale) and d['confidence']>0.9:
+            if (h > frame_height / face_min_height_scale) and d['confidence']>0.96:
+                x, y, w, h = extend_bbox((x, y, w, h))
                 faces.append((x, y, w, h))
 
 
@@ -162,12 +163,12 @@ while (cap.isOpened()):
     cap.set(1, count)
     ret, frame = cap.read()
 
-    if ret and (count < 200):
+    if ret and (count < 2000):
         faces = face_detect_mtcnn(frame)
         frame = show_faces(frame, faces)
         out.write(frame)
 
-        count += fps * 10
+        count += fps*2
         pbar.update()
 
     else:
