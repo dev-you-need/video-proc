@@ -8,5 +8,6 @@ Pipfile.lock
 .mypy_cache/
 .vscode/
 .idea/
+.DS_Store/
 video_proc_env/
 */.ipynb_checkpoints
