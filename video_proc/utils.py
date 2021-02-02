@@ -56,8 +56,6 @@ def put_text(img: np.ndarray,
     attributes = [gender_label, race_label, age_label, num_frames]
 
     for index, attribute in enumerate(attributes):
-        bar_x = 35  # this is the size if an emotion is 100%
-
         if x + w + pivot_img_size < resolution_x:
 
             text_location_y = y + 20 + (index + 1) * 20
