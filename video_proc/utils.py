@@ -39,7 +39,7 @@ def put_text(img: np.ndarray,
 
     img = cv2.putText(img, person.race, (int(x), int(y + h + 44)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
-    img = cv2.putText(img, person.percent_in_video(all_frames_cnt), (int(x), int(y + h + 66)),
-                      cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    # img = cv2.putText(img, person.percent_in_video(all_frames_cnt), (int(x), int(y + h + 66)),
+    #                 cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
     return img
