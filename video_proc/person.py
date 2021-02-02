@@ -121,7 +121,7 @@ class Person(object):
             Text information about percentage of appearing person in video
         """
 
-        return f'Percentage of frames {round(len(self.age_predictions) / all_frames_cnt, 3)}'
+        return "" # f'Percentage of frames {round(len(self.age_predictions) / all_frames_cnt, 3)}'
 
     def verify_person(self, img: np.ndarray) -> bool:
         """
