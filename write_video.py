@@ -216,20 +216,13 @@ faces = []
 faces_attr = []
 
 while (cap.isOpened()):
-    cap.set(1, count)
     ret, frame = cap.read()
 
-    if ret and (count < 20000):
-        if count%(fps//2) == 0:
-            faces = face_detect_mtcnn(frame)
-            faces_attr = face_attrib_recognition(frame, faces)
-
-            #cv2.putText(frame, str(count), (40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-
-        frame = put_text(frame, faces_attr)
+    if ret:
+        faces = face_detect_mtcnn(frame)
+        frame = show_faces(frame, faces)
         out.write(frame)
 
-        count += 1
         pbar.update()
 
     else:
